@@ -2,16 +2,15 @@ import os
 import requests
 import re
 import csv
+import time
 from groq import Groq
 
-# 1. استدعاء المخ (Groq) باستخدام المفتاح اللي أمناه في الخزنة
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 def analyze_lead_with_ai(email):
-    """الذكاء الاصطناعي بيحلل الإيميل ويشوف هل صاحبه زبون 'حوت' ولا لأ"""
     try:
-        prompt = f"Analyze this potential customer email: {email}. Is this likely a person who buys luxury, high-end, heavyweight streetwear (600 GSM, Old Money style)? Respond with ONLY one word: 'High-Value' or 'Normal'."
-        
+        # أمر تحليل سريع عشان ما نستهلكش وقت طويل مع العدد الكبير
+        prompt = f"Is {email} likely a luxury fashion buyer? Answer: High or Normal."
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="llama3-8b-8192",
@@ -20,34 +19,44 @@ def analyze_lead_with_ai(email):
     except:
         return "Normal"
 
-# 2. كلمات البحث الذكية (Targeting)
+# توسيع قائمة الأهداف لتشمل تيك توك وريديت ومنتديات الموضة
 queries = [
-    'site:instagram.com "luxury streetwear collector" "@gmail.com"',
-    'site:linkedin.com "fashion entrepreneur" "@gmail.com"',
-    'site:facebook.com "quiet luxury fashion" "@gmail.com"',
-    'site:twitter.com "hypebeast" "@gmail.com"'
+    'site:tiktok.com "luxury streetwear" "@gmail.com"',
+    'site:reddit.com "r/streetwear" OR "r/repsneakers" "@gmail.com"',
+    'site:instagram.com "high-end fashion" "@gmail.com" OR "@icloud.com"',
+    'site:facebook.com "luxury car owners" fashion "@gmail.com"',
+    'site:fashionforum.com "quiet luxury" "@gmail.com"',
+    'site:pinterest.com "aesthetic outfits" "@gmail.com"',
+    'site:twitter.com "crypto whale" fashion "@gmail.com"',
+    'site:youtube.com "fashion haul" 600gsm "@gmail.com"'
 ]
 
-def collect_emails():
+def collect_heavy_leads():
     all_found = []
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    
     for q in queries:
-        url = f"https://www.google.com/search?q={q}&num=30"
-        response = requests.get(url, headers=headers)
-        emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', response.text)
-        all_found.extend(emails)
+        # بنزود الـ num لـ 100 عشان نسحب داتا أكتر في المرة الواحدة
+        url = f"https://www.google.com/search?q={q}&num=100"
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', response.text)
+            all_found.extend(emails)
+            time.sleep(2) # حماية عشان جوجل ما يعملش بلوك
+        except:
+            continue
+            
     return list(set(all_found))
 
-# 3. التشغيل وحفظ النتائج مع التقييم
-leads = collect_emails()
+leads = collect_heavy_leads()
 
 with open('leads.csv', 'w', newline='') as f:
     writer = csv.writer(f)
-    # زودنا عمود جديد للتقييم
     writer.writerow(['Email', 'AI_Assessment'])
     
+    # هنا البوت هيلف على الـ 500+ إيميل اللي جابهم
     for email in leads:
         assessment = analyze_lead_with_ai(email)
         writer.writerow([email, assessment])
 
-print(f"Mission Done! {len(leads)} leads analyzed and saved.")
+print(f"Target Reached: {len(leads)} leads extracted from all social platforms.")
