@@ -2,8 +2,8 @@ name: Vantage Lead Gen Bot
 
 on:
   schedule:
-    - cron: '0 0 * * *' # هيشتغل لوحده كل يوم الساعة 12 بالليل
-  workflow_dispatch: # زرار تشغيل يدوي
+    - cron: '0 0 * * *' 
+  workflow_dispatch: 
 
 jobs:
   run-bot:
@@ -20,15 +20,18 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install -r requirements.txt
 
-      - name: Run Scraper
+      - name: Run Scraper and AI
         run: python bot.py
+        env:
+          # دي أهم خطوة: بنقول للبوت خد المفتاح من الخزنة
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
       - name: Save Leads
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
           git add leads.csv
-          git commit -m "New Leads Found" || exit 0
+          git commit -m "AI Analyzed Leads Found" || exit 0
           git push
