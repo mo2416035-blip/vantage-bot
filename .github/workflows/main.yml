@@ -1,0 +1,34 @@
+name: Vantage Lead Gen Bot
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # هيشتغل لوحده كل يوم الساعة 12 بالليل
+  workflow_dispatch: # زرار تشغيل يدوي
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Scraper
+        run: python bot.py
+
+      - name: Save Leads
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add leads.csv
+          git commit -m "New Leads Found" || exit 0
+          git push
